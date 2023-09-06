@@ -258,8 +258,8 @@
   ("C-c p" . projectile-command-map)
   :init
   ;; NOTE: Set this to the folder where you keep your Git repos!
-  (when (file-directory-p "~/Documents/C/")
-  (setq projectile-project-search-path '("~/Documents/C/")))
+  (when (file-directory-p "~/projects")
+  (setq projectile-project-search-path '("~/projects")))
   (setq projectile-switch-project-action #'projectile-dired)
   (setq projectile-run-use-comint-mode t))
 
@@ -285,20 +285,37 @@
 
 
 ;; lsp + clangd
+(setq lsp-language-server 'clangd)
+(add-hook 'c-mode-hook #'lsp)
+(add-hook 'c++-mode-hook #'lsp)
 
 (use-package lsp-mode
-  :commands (lsp lsp-deferred)
+  ;;:commands (lsp lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-c l")  ;; Or 'C-l', 's-l'
   :config
   (lsp-enable-which-key-integration t)
-  (setq lsp-diagnostic-package :none)
+  (setq lsp-diagnostic-package :none))
   ;; disable side popups
-  ;; (setq lsp-ui-sideline-enable nil)
-  :hook
-  ((c-mode c++-mode) . lsp-mode))
+;; (setq lsp-ui-sideline-enable nil)
 
-(add-hook 'c-mode-common-hook (lambda() (setq flycheck-checker 'c/c++-clang)(flycheck-mode t)))
+(with-eval-after-load 'lsp-mode
+  (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
+;; (require 'dap-cpptools)
+ ;; (yas-global-mode))
+
+;;(add-hook 'c-mode-hook (lambda() (setq flycheck-checker 'c/c++-clang)(flycheck-mode t)))
+(defun flycheck-c-mode-preset()
+  (require 'flycheck)
+  (setq flychecker 'c/c++-clang)
+  (flycheck-mode)
+  (message "flychecking is enabled by Taras in C/C++ mode"))
+
+(use-package flycheck
+  :after lsp)
+
+(add-hook 'c-mode-hook  'flycheck-c-mode-preset)
+(add-hook 'c++-mode-hook  'flycheck-c-mode-preset)
 	  
 (use-package lsp-ui
   :hook (lsp-mode . lsp-ui-mode)
