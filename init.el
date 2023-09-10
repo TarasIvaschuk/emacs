@@ -48,6 +48,9 @@
 
 ;;------------------ basic UI configuration --------------
 
+;; set C-g as Esc
+(global-set-key (kbd "C-g") 'keyboard-escape-quit)
+
 ;;to stop startup message
 (setq inhibit-startup-message t)
 
@@ -61,27 +64,15 @@
 (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
-
-;; set default font
-;(set-face-attribute 'default nil  :font  "Menlo" :height my/default-font-size)
-;;(add-to-list 'default-frame-alist '(fullscreen . maximized))
-
-;; Set the fixed pitch face
-;(set-face-attribute 'fixed-pitch nil :font "Menlo" :height my/default-font-size)
-
-;; Set the variable pitch face
-;(set-face-attribute 'variable-pitch nil :font "Menlo" :height my/default-variable-font-size :weight 'regular)
-
-
 (defun my/set-font-faces ()
   (message "Setting faces!")
-  (set-face-attribute 'default nil :font "Menlo" :height my/default-font-size)
+  (set-face-attribute 'default nil :font "Fira Code" :height my/default-font-size)
 
   ;; Set the fixed pitch face
-  (set-face-attribute 'fixed-pitch nil :font "Menlo" :height my/default-font-size)
+  (set-face-attribute 'fixed-pitch nil :font "Fira Code" :height my/default-font-size)
 
   ;; Set the variable pitch face
-  (set-face-attribute 'variable-pitch nil :font "Menlo" :height my/default-variable-font-size :weight 'regular))
+  (set-face-attribute 'variable-pitch nil :font "Fira Code" :height my/default-variable-font-size :weight 'regular))
 
 (if (daemonp)
     (add-hook 'after-make-frame-functions
@@ -90,11 +81,6 @@
                 (with-selected-frame frame
                   (my/set-font-faces))))
     (my/set-font-faces))
-
-
-
-;; maximize window on startup(setq user-emacs-directory (expand-file-name "~/.cache/emacs"))
-;;(add-hook 'window-setup-hook 'toggle-frame-maximized t)
 
 ;;(menu-bar-mode -1)
 (tool-bar-mode -1)
@@ -119,13 +105,23 @@
 ;;enable clipboard
 (setq select-enable-clipboard t)
 
+;; use ace window to switch between windows
+(use-package ace-window
+:init
+(progn
+(custom-set-faces
+'(aw-leading-char-face
+((t (:inherit ace-jump-face-foreground :height 3.0)))))
+))
+
+(global-set-key (kbd "M-o") 'ace-window)
 
 ;; ----------------------------  UI Configuration --------------------
 ;; custom load path for themes
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
 
 ;; load custom theme
-;;(load-theme 'dracula t)
+(load-theme 'zenburn t)
 
 ;; command log to buffer
 (use-package command-log-mode
@@ -189,8 +185,7 @@
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
 
-(use-package doom-themes
-  :init (load-theme 'doom-dracula t))
+(use-package doom-themes)
 
 (use-package which-key
   :defer 0
@@ -227,11 +222,11 @@
 ;; keybindings  
 (use-package general
   :config
-  (general-create-definer  my-leader-def
-    :prefix "C-C C-SPC")
+  (general-create-definer taras/my-leader-keys
+    :prefix "C-C C-SPC"))
 
-  (my-leader-def
-     "t" '(counsel-load-theme :which-key "choose a theme")))
+  (taras/my-leader-keys
+     "t" '(counsel-load-theme :which-key "choose a theme"))
 
 
 ;; rememder the place in a file
@@ -272,6 +267,23 @@
   :after projectile
   :config (counsel-projectile-mode))
 
+(use-package projectile-ripgrep
+  :after projectile)
+
+
+(use-package ag
+  :after projectile)
+
+(use-package wgrep
+  :after projectile)
+
+
+(use-package wgrep-ag
+  :after projectile)
+
+
+;; to rename symbols quickly
+(use-package iedit)
 
 ;; for formatting C and C++ code
 ;; a .clang-format file should be present
@@ -340,6 +352,27 @@
 (lambda ()
 (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
   (ggtags-mode 1)))))
+
+
+
+;; opens eshell in right split window
+(add-to-list 'display-buffer-alist
+            '("^\\*eshell\\*$" (display-buffer-in-side-window) (side . bottom)))
+
+
+;; use hydra to resize buffers
+(use-package hydra)
+
+(defhydra hydra-buffer-resize (:timeout 6)
+  "resize buffer"
+  ("h" enlarge-window-horizontally "enlarge h")
+  ("n" shrink-window-horizontally "shrink h")
+  ("d" shrink-window "shrink v")
+  ("u" enlarge-window "enlarge v")
+  ("f" nil "finished" :exit t))
+
+(taras/my-leader-keys
+ "r" '(hydra-buffer-resize/body :which-key "resize buffer"))
 
 ;; completion
 
