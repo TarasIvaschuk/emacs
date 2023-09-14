@@ -3,8 +3,8 @@
 ;; -------- custom variables -----------
 
 ;; You will most likely need to adjust this font size for your system!
-(defvar my/default-font-size 130)
-(defvar my/default-variable-font-size 130)
+(defvar my/default-font-size 132)
+(defvar my/default-variable-font-size 132)
 ;; Make frame transparency overridable
 (defvar my/frame-transparency '(100 . 100))
 
@@ -82,9 +82,13 @@
                   (my/set-font-faces))))
     (my/set-font-faces))
 
-;;(menu-bar-mode -1)
+(menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
+;; when type std:: 
+;; the cursor jumps to the beginning of the line and it gets
+;; so annoying
+(electric-indent-mode -1)
 ;;(electric-pair-mode 1)			
 ;; make electric-pair-mode work on more brackets
 ;; (setq electric-pair-pairs
@@ -121,7 +125,7 @@
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
 
 ;; load custom theme
-(load-theme 'zenburn t)
+(load-theme 'doom-dracula t)
 
 ;; command log to buffer
 (use-package command-log-mode
@@ -307,6 +311,7 @@
   (setq lsp-keymap-prefix "C-c l")  ;; Or 'C-l', 's-l'
   :config
   (lsp-enable-which-key-integration t)
+  (setq lsp-headerline-breadcrumb-enable nil)
   (setq lsp-diagnostic-package :none))
   ;; disable side popups
 ;; (setq lsp-ui-sideline-enable nil)
