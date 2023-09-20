@@ -1,12 +1,13 @@
 
-
 ;; -------- custom variables -----------
 
 ;; You will most likely need to adjust this font size for your system!
-(defvar my/default-font-size 132)
-(defvar my/default-variable-font-size 132)
+(defvar my/default-font-size 130)
+(defvar my/default-variable-font-size 130)
 ;; Make frame transparency overridable
 (defvar my/frame-transparency '(100 . 100))
+(defvar my/font-face "DejaVu Sans Mono")
+(defvar my/font-weight 'regular)
 
 ;;------------------- package management setup ----------------
 ;; set Melpa
@@ -66,13 +67,13 @@
 
 (defun my/set-font-faces ()
   (message "Setting faces!")
-  (set-face-attribute 'default nil :font "Fira Code" :height my/default-font-size)
+  (set-face-attribute 'default nil :font my/font-face :height my/default-font-size :weight my/font-weight)
 
   ;; Set the fixed pitch face
-  (set-face-attribute 'fixed-pitch nil :font "Fira Code" :height my/default-font-size)
+  (set-face-attribute 'fixed-pitch nil :font my/font-face :height my/default-font-size :weight my/font-weight)
 
   ;; Set the variable pitch face
-  (set-face-attribute 'variable-pitch nil :font "Fira Code" :height my/default-variable-font-size :weight 'regular))
+  (set-face-attribute 'variable-pitch nil :font my/font-face :height my/default-variable-font-size :weight my/font-weight))
 
 (if (daemonp)
     (add-hook 'after-make-frame-functions
@@ -88,8 +89,7 @@
 ;; when type std:: 
 ;; the cursor jumps to the beginning of the line and it gets
 ;; so annoying
-(electric-indent-mode -1)
-;;(electric-pair-mode 1)			
+			
 ;; make electric-pair-mode work on more brackets
 ;; (setq electric-pair-pairs
 ;;       '(
@@ -102,7 +102,8 @@
 (dolist (mode '(org-mode-hook
                 term-mode-hook
                 shell-mode-hook
-                eshell-mode-hook))
+                eshell-mode-hook
+		Man-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 
@@ -124,8 +125,22 @@
 ;; custom load path for themes
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
 
+(setq modus-themes-italic-constructs t
+      modus-themes-bold-constructs t)
+
+;; Load the theme of your choice:
+(load-theme 'modus-operandi t) ;; OR (load-theme 'modus-vivendi)
+
+(define-key global-map (kbd "<f5>") #'modus-themes-toggle)
+
+;;(setq modus-themes-paren-match '(bold intense))
+;;(setq modus-themes-syntax 'yellow-comments)
+
+;;(setq modus-themes-syntax '(alt-syntax yellow-comments)) 
+
 ;; load custom theme
-(load-theme 'doom-dracula t)
+
+;;(load-theme 'modus-operandi t)
 
 ;; command log to buffer
 (use-package command-log-mode
@@ -180,6 +195,7 @@
 ;; to navigate in a buffer by letters
 
 (use-package avy
+     :after ggtags
      :bind
      (("M-s" . avy-goto-char)))
 
@@ -222,6 +238,11 @@
 (add-hook 'c-mode-hook (lambda () (setq comment-start "//"
                                         comment-end   "")))
 
+
+(use-package evil-nerd-commenter
+  :bind ("M-;" . evilnc-comment-or-uncomment-lines))
+
+
 ;; to use shift+ space as prefix to global
 ;; keybindings  
 (use-package general
@@ -230,7 +251,18 @@
     :prefix "C-C C-SPC"))
 
   (taras/my-leader-keys
-     "t" '(counsel-load-theme :which-key "choose a theme"))
+   "t" '(counsel-load-theme :which-key "choose a theme"))
+
+;; folding
+(use-package origami
+  :hook
+  (c-mode . origami-mode))
+
+  (taras/my-leader-keys
+    "o"  '(:ignore t :which-key "origami")
+    "or" '(origami-recursively-toggle-node :which-key "recursively toggle")
+    "ot" '(origami-toggle-node :which-key "toggle"))
+
 
 
 ;; rememder the place in a file
@@ -312,9 +344,20 @@
   :config
   (lsp-enable-which-key-integration t)
   (setq lsp-headerline-breadcrumb-enable nil)
+  (setq lsp-ui-sideline-enable nil)
   (setq lsp-diagnostic-package :none))
-  ;; disable side popups
-;; (setq lsp-ui-sideline-enable nil)
+
+(taras/my-leader-keys
+  "l"  '(:ignore t :which-key "lsp")
+  "ld" 'xref-find-definitions
+  "lr" 'xref-find-references
+  "ln" 'lsp-ui-find-next-reference
+  "lp" 'lsp-ui-find-prev-reference
+  "ls" 'counsel-imenu
+  "le" 'lsp-ui-flycheck-list
+  "lS" 'lsp-ui-sideline-mode
+  "lX" 'lsp-execute-code-action)
+
 
 (with-eval-after-load 'lsp-mode
   (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
@@ -448,7 +491,8 @@
 
 (use-package expand-region
   :config
-  (global-set-key(kbd "C-=") 'er/expand-region))
+  (global-set-key(kbd "C-=") 'er/expand-region)
+  (global-set-key(kbd "C-+") 'er/contract-region))
 
 
 ;; C/C++ configuration
