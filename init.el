@@ -47,6 +47,19 @@
 (setq auto-save-list-file-prefix (expand-file-name "tmp/auto-saves/sessions/" user-emacs-directory)
       auto-save-file-name-transforms `((".*" ,(expand-file-name "tmp/auto-saves/" user-emacs-directory) t)))
 
+(setq auto-save-default nil)
+(setq make-backup-files nil)
+
+
+;;------------------- auto save files --------------------
+
+(use-package super-save
+  :defer 1
+  :diminish super-save-mode
+  :config
+  (super-save-mode +1)
+  (setq super-save-auto-save-when-idle t))
+
 ;;------------------ basic UI configuration --------------
 
 ;; set C-g as Esc
@@ -262,11 +275,6 @@
     "o"  '(:ignore t :which-key "origami")
     "or" '(origami-recursively-toggle-node :which-key "recursively toggle")
     "ot" '(origami-toggle-node :which-key "toggle"))
-
-
-
-;; rememder the place in a file
-(save-place-mode 1)
 
 
 ;; remember the history in the mini buffer(alt + p , alt + n)
