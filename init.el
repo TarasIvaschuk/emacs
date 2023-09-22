@@ -9,19 +9,6 @@
 (defvar my/font-face "DejaVu Sans Mono")
 (defvar my/font-weight 'regular)
 
-(defun my/select-current-line-and-forward-line (arg)
-  "Select the current line and move the cursor by ARG lines IF
-no region is selected.
-
-If a region is already selected when calling this command, only move
-the cursor by ARG lines."
-  (interactive "p")
-  (when (not (use-region-p))
-    (forward-line 0)
-    (set-mark-command nil)
-    (move-end-of-line arg)))
-(global-set-key (kbd "C-l") #'my/select-current-line-and-forward-line)
-
 ;;------------------- package management setup ----------------
 ;; set Melpa
 
@@ -75,6 +62,21 @@ the cursor by ARG lines."
   (setq super-save-auto-save-when-idle t))
 
 ;;------------------ basic UI configuration --------------
+;; do not forget to turn off display-line-numbers mode
+;; M-b customize-option RET and toggle it to nil
+;; save and apply
+
+(use-package nlinum
+  :custom
+  (nlinum-format "%4d    ")
+  (nlinum-highlight-current-line t)
+  (nlinum-widen t)
+  :config
+  (global-nlinum-mode t))
+
+
+
+
 
 ;; set C-g as Esc
 (global-set-key (kbd "C-g") 'keyboard-escape-quit)
@@ -82,7 +84,21 @@ the cursor by ARG lines."
 ;;to stop startup message
 (setq inhibit-startup-message t)
 
-(set-fringe-mode 10)        ; Give some breathing room
+(set-fringe-mode '(0 . 0))      ; Give some breathing room
+
+;; select a line
+(defun my/select-current-line-and-forward-line (arg)
+  "Select the current line and move the cursor by ARG lines IF
+no region is selected.
+
+If a region is already selected when calling this command, only move
+the cursor by ARG lines."
+  (interactive "p")
+  (when (not (use-region-p))
+    (forward-line 0)
+    (set-mark-command nil)
+    (move-end-of-line arg)))
+(global-set-key (kbd "C-l") #'my/select-current-line-and-forward-line)
 
 ;; Set frame transparency
 (set-frame-parameter (selected-frame) 'alpha my/frame-transparency)
@@ -134,13 +150,13 @@ the cursor by ARG lines."
                 shell-mode-hook
                 eshell-mode-hook
 		Man-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+  (add-hook mode (lambda () (nlinum-mode 0))))
 
-(global-display-line-numbers-mode t)
+;;(global-display-line-numbers-mode t)
 
 
 ;;highlight the line
-;;(global-hl-line-mode t)
+(global-hl-line-mode t)
 
 ;;enable clipboard
 (setq select-enable-clipboard t)
@@ -166,7 +182,8 @@ the cursor by ARG lines."
 ;; Load the theme of your choice:
 (load-theme 'modus-operandi t) ;; OR (load-theme 'modus-vivendi)
 
-(define-key global-map (kbd "<f5>") #'modus-themes-toggle)
+;;(define-key global-map (kbd "<f5>") #'modus-themes-toggle)
+(global-set-key (kbd "<f5>") 'compile)
 
 ;;(setq modus-themes-paren-match '(bold intense))
 ;;(setq modus-themes-syntax 'yellow-comments)
