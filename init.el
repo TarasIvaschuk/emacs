@@ -9,6 +9,19 @@
 (defvar my/font-face "DejaVu Sans Mono")
 (defvar my/font-weight 'regular)
 
+(defun my/select-current-line-and-forward-line (arg)
+  "Select the current line and move the cursor by ARG lines IF
+no region is selected.
+
+If a region is already selected when calling this command, only move
+the cursor by ARG lines."
+  (interactive "p")
+  (when (not (use-region-p))
+    (forward-line 0)
+    (set-mark-command nil)
+    (move-end-of-line arg)))
+(global-set-key (kbd "C-l") #'my/select-current-line-and-forward-line)
+
 ;;------------------- package management setup ----------------
 ;; set Melpa
 
@@ -28,6 +41,7 @@
 
 (require 'use-package)
 (setq use-package-always-ensure t)
+
 
 ;; ------------------ clean folders ------------------------
 
@@ -98,7 +112,7 @@
 
 (menu-bar-mode -1)
 (tool-bar-mode -1)
-(scroll-bar-mode -1)
+;;(scroll-bar-mode -1)
 ;; when type std:: 
 ;; the cursor jumps to the beginning of the line and it gets
 ;; so annoying
@@ -109,7 +123,10 @@
 ;;         (?\" . ?\")
 ;;         (?\{ . ?\})
 ;;         (?\' . ?\')))
-(global-display-line-numbers-mode t)
+
+
+;;(setq-default linum-format "%4d  ")
+
 (column-number-mode)
 ;; Disable line numbers for some modes
 (dolist (mode '(org-mode-hook
@@ -119,6 +136,11 @@
 		Man-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
+(global-display-line-numbers-mode t)
+
+
+;;highlight the line
+;;(global-hl-line-mode t)
 
 ;;enable clipboard
 (setq select-enable-clipboard t)
