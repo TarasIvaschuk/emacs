@@ -1,12 +1,14 @@
-
-;; -------- custom variables -----------
+;; -------- customoe variables -----------
 
 ;; You will most likely need to adjust this font size for your system!
 (defvar my/default-font-size 130)
 (defvar my/default-variable-font-size 130)
 ;; Make frame transparency overridable
 (defvar my/frame-transparency '(100 . 100))
-(defvar my/font-face "DejaVu Sans Mono")
+;; (defvar my/font-face "Inconsolata Nerd Font Mono")
+(defvar my/font-face "SourceCode Pro")
+;; (defvar my/font-face "Hack Nerd Font Mono")
+;; (defvar my/font-face "SauceCodePro Nerd Font Mono")
 (defvar my/font-weight 'regular)
 
 ;;------------------- package management setup ----------------
@@ -61,7 +63,120 @@
   (super-save-mode +1)
   (setq super-save-auto-save-when-idle t))
 
-;;------------------ basic UI configuration --------------
+
+
+;; -----------------  basic ui ---------------------
+
+(repeat-mode 1)
+(recentf-mode 1)
+
+
+;; to keep point position while scrolling
+(setq scroll-preserve-screen-position t)
+
+;; ctrl+ backspace removes a space or word
+;; https://stackoverflow.com/questions/28221079/ctrl-backspace-in-emacs-deletes-too-much
+
+(defun my/backward-kill-word ()
+  "Remove all whitespace if the character behind the cursor is whitespace, otherwise remove a word."
+  (interactive)
+  (if(looking-back "[ \t\n]")
+      ;; delete horizontal space before us and then check to see if we
+      ;; are looking at a newline
+      (progn (delete-horizontal-space 't)
+             (while(looking-back "[ \t\n]")
+               (backward-delete-char 1)))
+    ;; otherwise, just do the normal kill word.
+      (backward-kill-word 1)))
+
+(global-set-key (kbd "C-<backspace>") 'my/backward-kill-word)
+
+;;duplicate line
+(defun duplicate-line (arg)
+  "Duplicate current line, leaving point in lower line."
+  (interactive "*p")
+
+  ;; save the point for undo
+  (setq buffer-undo-list (cons (point) buffer-undo-list))
+
+  ;; local variables for start and end of line
+  (let ((bol (save-excursion (beginning-of-line) (point)))
+        eol)
+    (save-excursion
+
+      ;; don't use forward-line for this, because you would have
+      ;; to check whether you are at the end of the buffer
+      (end-of-line)
+      (setq eol (point))
+
+      ;; store the line and disable the recording of undo information
+      (let ((line (buffer-substring bol eol))
+            (buffer-undo-list t)
+            (count arg))
+        ;; insert the line arg times
+        (while (> count 0)
+          (newline)         ;; because there is no newline in 'line'
+          (insert line)
+          (setq count (1- count)))
+        )
+
+      ;; create the undo information
+      (setq buffer-undo-list (cons (cons eol (point)) buffer-undo-list)))
+    ) ; end-of-let
+
+  ;; put the point in the lowest line and return
+  (next-line arg))
+
+(global-set-key (kbd "C-S-d") 'duplicate-line)
+
+;; remap M-n and M-r in Man mode such way disabling interfering with smartscan keybindings
+(add-hook 'Man-mode-hook
+	  (lambda ()
+(keymap-set Man-mode-map "M-N" 'Man-next-manpage)
+(keymap-set Man-mode-map "M-P" 'Man-previous-manpage)))
+
+
+;; query-replace current word
+(defun qrc (replace-str)
+  (interactive "sDo query-replace current word with: ")
+  (let ((word (thing-at-point 'symbol)))
+  (beginning-of-thing 'symbol)
+      (query-replace word replace-str)))
+  
+;; delete selection mode
+(delete-selection-mode 1)
+
+;; increase line spacing
+;; (setq-default line-spacing 0.1)
+
+;; select text using a mouse without dragging
+;; https://superuser.com/questions/521223/shift-click-to-extend-marked-region
+
+(define-key global-map (kbd "<S-down-mouse-1>") 'mouse-save-then-kill)
+
+;; dired
+(setq dired-dwim-target t)
+(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+
+;; jump quickly on symbol
+(use-package smartscan
+  :defer 1
+  :config
+  (global-smartscan-mode 1))
+
+(global-unset-key (kbd "<insert>"))
+
+;; save the cursor's last place in buffer
+(save-place-mode t)
+
+;; display a counter showing the number of the current and other
+;; matches. Place it before prompt (or after if needed)
+
+(setq isearch-lazy-count t)
+(setq lazy-count-prefix-format "(%s/%s) ")
+(setq lazy-count-suffix-format nil)
+
+;; display line numbers nicely
 ;; do not forget to turn off display-line-numbers mode
 ;; M-b customize-option RET and toggle it to nil
 ;; save and apply
@@ -75,16 +190,10 @@
   (global-nlinum-mode t))
 
 
-
-
-
-;; set C-g as Esc
-(global-set-key (kbd "C-g") 'keyboard-escape-quit)
-
 ;;to stop startup message
 (setq inhibit-startup-message t)
 
-(set-fringe-mode '(0 . 0))      ; Give some breathing room
+(set-fringe-mode '(0 . 0))      ; no  breathing room
 
 ;; select a line
 (defun my/select-current-line-and-forward-line (arg)
@@ -98,7 +207,7 @@ the cursor by ARG lines."
     (forward-line 0)
     (set-mark-command nil)
     (move-end-of-line arg)))
-(global-set-key (kbd "C-l") #'my/select-current-line-and-forward-line)
+;; (global-set-key (kbd "C-l") #'my/select-current-line-and-forward-line)
 
 ;; Set frame transparency
 (set-frame-parameter (selected-frame) 'alpha my/frame-transparency)
@@ -149,28 +258,18 @@ the cursor by ARG lines."
                 term-mode-hook
                 shell-mode-hook
                 eshell-mode-hook
+		xref--xref-buffer-mode-hook
+		occur-hook
 		Man-mode-hook))
   (add-hook mode (lambda () (nlinum-mode 0))))
 
 ;;(global-display-line-numbers-mode t)
-
 
 ;;highlight the line
 (global-hl-line-mode t)
 
 ;;enable clipboard
 (setq select-enable-clipboard t)
-
-;; use ace window to switch between windows
-(use-package ace-window
-:init
-(progn
-(custom-set-faces
-'(aw-leading-char-face
-((t (:inherit ace-jump-face-foreground :height 3.0)))))
-))
-
-(global-set-key (kbd "M-o") 'ace-window)
 
 ;; ----------------------------  UI Configuration --------------------
 ;; custom load path for themes
@@ -182,75 +281,23 @@ the cursor by ARG lines."
 ;; Load the theme of your choice:
 (load-theme 'modus-operandi t) ;; OR (load-theme 'modus-vivendi)
 
+;; Enable underlines by applying a color to them
+;; (setq modus-themes-common-palette-overrides
+;;       '((bg-paren-match bg-magenta-intense)
+;;         (underline-paren-match fg-main)))
+
 ;;(define-key global-map (kbd "<f5>") #'modus-themes-toggle)
 (global-set-key (kbd "<f5>") 'compile)
 
-;;(setq modus-themes-paren-match '(bold intense))
+;; (setq modus-themes-paren-match '(bold intense))
 ;;(setq modus-themes-syntax 'yellow-comments)
 
 ;;(setq modus-themes-syntax '(alt-syntax yellow-comments)) 
 
-;; load custom theme
-
-;;(load-theme 'modus-operandi t)
-
-;; command log to buffer
-(use-package command-log-mode
-  :commands comand-log-mode)
-
-;; IVY
-(use-package ivy
-  :diminish
-  :bind (("C-s" . swiper-all)
-         :map ivy-minibuffer-map
-         ("TAB" . ivy-alt-done)	
-         ("C-l" . ivy-alt-done)
-         ("C-j" . ivy-next-line)
-	 ("C-s" . ivy-next-line)
-         ("C-k" . ivy-previous-line)
-	 ("C-r" . ivy-previous-line)
-         :map ivy-switch-buffer-map
-         ("C-k" . ivy-previous-line)
-	 ("C-r" . ivy-previous-line)
-	 ("C-s" . ivy-next-line)
-         ("C-l" . ivy-done)
-         ("C-d" . ivy-switch-buffer-kill)
-         :map ivy-reverse-i-search-map
-         ("C-k" . ivy-previous-line)
-	 ("C-r" . ivy-previous-line)
-	 ("C-s" . ivy-next-line)
-         ("C-d" . ivy-reverse-i-search-kill))
-  :config
-  (ivy-mode 1))
-
-(use-package ivy-rich
-  :after ivy
-  :init
-  (ivy-rich-mode 1))
-
-
-(use-package swiper
-  :after ivy
-  :bind
-  (("C-s" . swiper)
-   ("C-r" . swiper)
-   ("C-c C-r" . ivy-resume)
-   ("M-x" . counsel-M-x)
-   ("C-x C-f" . counsel-find-file))
-  :config
-  (progn
-    (ivy-mode 1)
-    (setq ivy-use-virtual-buffers t)
-    (setq enable-recursive-minibuffers t)
-    (define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)))
-
 ;; to navigate in a buffer by letters
 
 (use-package avy
-     :after ggtags
-     :bind
-     (("M-s" . avy-goto-char)))
-
+     :after ggtags)
 
 ;; colorize the brackets
 
@@ -266,44 +313,140 @@ the cursor by ARG lines."
   (which-key-mode)
   (setq which-key-idle-delay 3))
 
+;; --------------------- completion framework ----------------------------
+(defun dw/minibuffer-backward-kill (arg)
+  "When minibuffer is completing a file name delete up to parent
+folder, otherwise delete a word"
+  (interactive "p")
+  (if minibuffer-completing-file-name
+      ;; Borrowed from https://github.com/raxod502/selectrum/issues/498#issuecomment-803283608
+      (if (string-match-p "/." (minibuffer-contents))
+          (zap-up-to-char (- arg) ?/)
+        (delete-minibuffer-contents))
+      (backward-kill-word arg)))
 
-;; tweak the counsel
-(use-package counsel
-  :bind (("M-x" . counsel-M-x)
-         ("C-x b" . counsel-switch-buffer)
-         ("C-x C-f" . counsel-find-file)
+(use-package vertico
+  :bind (:map vertico-map
+         ("C-n" . vertico-next)
+         ("C-r" . vertico-previous)
+         ("C-f" . vertico-exit)
          :map minibuffer-local-map
-         ("C-r" . 'counsel-minibuffer-history)))
-
-(use-package helpful
-  :commands (helpful-callable helpful-variable helpful-command helpful-key)
+         ("<C-backspace>" . dw/minibuffer-backward-kill))
   :custom
-  (counsel-describe-function-function #'helpful-callable)
-  (counsel-describe-variable-function #'helpful-variable)
-  :bind
-  ([remap describe-function] . counsel-describe-function)
-  ([remap describe-command] . helpful-command)
-  ([remap describe-variable] . counsel-describe-variable)
-  ([remap describe-key] . helpful-key))
+  (vertico-cycle t)
+  :init
+  (vertico-mode))
 
-;; c comments //
-(add-hook 'c-mode-hook (lambda () (setq comment-start "//"
-                                        comment-end   "")))
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles . (partial-completion)))
+					)))
+
+(defun dw/get-project-root ()
+  (when (fboundp 'projectile-project-root)
+    (projectile-project-root)))
+
+(use-package consult
+  :after vertico
+  ;; :bind (("C-s" . consult-line)
+         ;; ("C-M-l" . consult-imenu)
+         ;; ("C-M-j" . persp-switch-to-buffer*)
+         ;; :map minibuffer-local-map
+         ;; ("C-r" . consult-history))
+  :custom
+  (consult-project-root-function #'dw/get-project-root)
+  (completion-in-region-function #'consult-completion-in-region))
 
 
+(use-package consult-projectile
+  :after (consult projectile))
+
+(use-package marginalia
+  :after vertico
+  :custom
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :init
+(marginalia-mode))
+
+(use-package embark
+  :bind (("C-S-a" . embark-act)))
+
+(defun embark-which-key-indicator ()
+  "An embark indicator that displays keymaps using which-key.
+The which-key help message will show the type and value of the
+current target followed by an ellipsis if there are further
+targets."
+  (lambda (&optional keymap targets prefix)
+    (if (null keymap)
+        (which-key--hide-popup-ignore-command)
+      (which-key--show-keymap
+       (if (eq (plist-get (car targets) :type) 'embark-become)
+           "Become"
+         (format "Act on %s '%s'%s"
+                 (plist-get (car targets) :type)
+                 (embark--truncate-target (plist-get (car targets) :target))
+                 (if (cdr targets) "…" "")))
+       (if prefix
+           (pcase (lookup-key keymap prefix 'accept-default)
+             ((and (pred keymapp) km) km)
+             (_ (key-binding prefix 'accept-default)))
+         keymap)
+       nil nil t (lambda (binding)
+                   (not (string-suffix-p "-argument" (cdr binding))))))))
+
+(setq embark-indicators
+  '(embark-which-key-indicator
+    embark-highlight-indicator
+    embark-isearch-highlight-indicator))
+
+(defun embark-hide-which-key-indicator (fn &rest args)
+  "Hide the which-key indicator immediately when using the completing-read prompter."
+  (which-key--hide-popup-ignore-command)
+  (let ((embark-indicators
+         (remq #'embark-which-key-indicator embark-indicators)))
+      (apply fn args)))
+
+(advice-add #'embark-completing-read-prompter
+            :around #'embark-hide-which-key-indicator)
+
+
+
+;; Consult users will also want the embark-consult package.
+(use-package embark-consult
+  :ensure t ; only need to install it, embark loads it after consult if found
+  :hook
+  (embark-collect-mode . consult-preview-at-point-mode))
+
+;; ------------------------------ end of completion framework ---------------------------------------
+;; (use-package helpful
+;;   :commands (helpful-callable helpful-variable helpful-command helpful-key)
+;;   :bind
+;;   ([remap describe-command] . helpful-command)
+;;   ([remap describe-key] . helpful-key))
+
+;; ---------------------  leader keybindings ----------------------
 (use-package evil-nerd-commenter
   :bind ("M-;" . evilnc-comment-or-uncomment-lines))
-
 
 ;; to use shift+ space as prefix to global
 ;; keybindings  
 (use-package general
   :config
+  (general-auto-unbind-keys)
   (general-create-definer taras/my-leader-keys
-    :prefix "C-C C-SPC"))
+    :prefix "C-;"))
 
   (taras/my-leader-keys
-   "t" '(counsel-load-theme :which-key "choose a theme"))
+    "t" '(load-theme :which-key "choose a theme")
+    "w" '(other-window :which-key "other window")
+    "i" '(consult-imenu : which-key "consult-imenu")
+    "k" '(kill-this-buffer :which-key "kill this buffer")
+    "SPC" '(mode-line-other-buffer :which-key "switch to recent buffer")
+    "q" '(qrc :which-key "query-replace the word at point")
+    "s" '(my/select-current-line-and-forward-line :which-key "select-current-line"))
+
 
 ;; folding
 (use-package origami
@@ -312,8 +455,9 @@ the cursor by ARG lines."
 
   (taras/my-leader-keys
     "o"  '(:ignore t :which-key "origami")
-    "or" '(origami-recursively-toggle-node :which-key "recursively toggle")
-    "ot" '(origami-toggle-node :which-key "toggle"))
+    "oo" '(origami-open-node-recursively :which-key "recursively open")
+    "oc" '(origami-close-node-recursively :which-key "recursively close")
+    "oa" '(origami-toggle-all-nodes :which-key "toggle all"))
 
 
 ;; remember the history in the mini buffer(alt + p , alt + n)
@@ -326,14 +470,22 @@ the cursor by ARG lines."
 ;; revert dired and other buffers
 (setq global-auto-revert-non-file-buffers t)
 
-
 ;; projects
 (use-package projectile
   :diminish projectile-mode
   :config (projectile-mode)
-  :custom ((projectile-completion-system 'ivy))
+  ;;:custom ((projectile-completion-system 'vertico))
   :bind-keymap
   ("C-c p" . projectile-command-map)
+ :bind					
+  ([remap projectile-switch-project] . consult-projectile-switch-project)
+  ([remap projectile-switch-to-buffer] . consult-projectile-switch-to-buffer)
+  ([remap projectile-find-file] . consult-projectile-find-file)
+  ([remap projectile-recentf] . consult-projectile-recentf)
+  ([remap projectile-find-file-other-window] . consult-projectile-find-file-other-window)
+  ([remap projectile-find-dir] . consult-projectile-find-dir)
+  ([remap projectile-switch-to-buffer-other-window] . consult-projectile-switch-to-buffer-other-window)
+  ([remap projectile-ripgrep] . consult-ripgrep)
   :init
   ;; NOTE: Set this to the folder where you keep your Git repos!
   (when (file-directory-p "~/projects")
@@ -345,41 +497,13 @@ the cursor by ARG lines."
 ;; if you want to disable splitting the buffer
 ;;(setq split-width-threshold nil)
 
-
-(use-package counsel-projectile
-  :after projectile
-  :config (counsel-projectile-mode))
-
 (use-package projectile-ripgrep
-  :after projectile)
-
-
-(use-package ag
   :after projectile)
 
 (use-package wgrep
   :after projectile)
 
-
-(use-package wgrep-ag
-  :after projectile)
-
-
-;; to rename symbols quickly
-(use-package iedit)
-
-;; for formatting C and C++ code
-;; a .clang-format file should be present
-;; in projectile directory
-
-(use-package clang-format
-  :config
-  (setq clang-format-style "file")
-  (setq clang-format-fallback-style "LLVM")
-  :bind(("C-c C-f" . clang-format-buffer)))
-
-
-;; lsp + clangd
+;; ------------------------lsp + clangd -----------------------------
 (setq lsp-language-server 'clangd)
 (add-hook 'c-mode-hook #'lsp)
 (add-hook 'c++-mode-hook #'lsp)
@@ -391,8 +515,19 @@ the cursor by ARG lines."
   :config
   (lsp-enable-which-key-integration t)
   (setq lsp-headerline-breadcrumb-enable nil)
-  (setq lsp-ui-sideline-enable nil)
   (setq lsp-diagnostic-package :none))
+
+	  
+(use-package lsp-ui
+  :hook (lsp-mode . lsp-ui-mode)
+  :config
+  (setq lsp-ui-doc-enable nil)
+  (setq lsp-ui-sideline-enable nil)
+  :custom
+  (lsp-ui-doc-position 'at-point))
+
+(use-package consult-lsp
+   :after lsp)
 
 (taras/my-leader-keys
   "l"  '(:ignore t :which-key "lsp")
@@ -400,7 +535,7 @@ the cursor by ARG lines."
   "lr" 'xref-find-references
   "ln" 'lsp-ui-find-next-reference
   "lp" 'lsp-ui-find-prev-reference
-  "ls" 'counsel-imenu
+  "ls" 'consult-imenu
   "le" 'lsp-ui-flycheck-list
   "lS" 'lsp-ui-sideline-mode
   "lX" 'lsp-execute-code-action)
@@ -408,8 +543,7 @@ the cursor by ARG lines."
 
 (with-eval-after-load 'lsp-mode
   (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
-;; (require 'dap-cpptools)
- ;; (yas-global-mode))
+
 
 ;;(add-hook 'c-mode-hook (lambda() (setq flycheck-checker 'c/c++-clang)(flycheck-mode t)))
 (defun flycheck-c-mode-preset()
@@ -421,23 +555,24 @@ the cursor by ARG lines."
 (use-package flycheck
   :after lsp)
 
-(add-hook 'c-mode-hook  'flycheck-c-mode-preset)
-(add-hook 'c++-mode-hook  'flycheck-c-mode-preset)
-	  
-(use-package lsp-ui
-  :hook (lsp-mode . lsp-ui-mode)
-  :custom
-  (lsp-ui-doc-position 'bottom))
+;; for formatting C and C++ code
+;; a .clang-format file should be present
+;; in projectile directory
+
+(use-package clang-format
+  :config
+  (setq clang-format-style "file")
+  (setq clang-format-fallback-style "LLVM"))
 
 
-(use-package lsp-ivy
-  :after lsp)
+(taras/my-leader-keys
+  "f" '(clang-format-buffer :which-key "format buffer with clang"));
 
-;;snippets and snippet expansion
+;; ------------------------lsp + clangd -----------------------------
+
+;;snippets expansion
 (use-package yasnippet-snippets
-:hook (prog-mode . yas-minor-mode)
-:bind("M-/" . yas-expand))
-
+:hook (prog-mode . yas-minor-mode))
 
 ;; tags for code navigation
 (use-package ggtags
@@ -448,12 +583,9 @@ the cursor by ARG lines."
 (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
   (ggtags-mode 1)))))
 
-
-
 ;; opens eshell in right split window
-(add-to-list 'display-buffer-alist
-            '("^\\*eshell\\*$" (display-buffer-in-side-window) (side . bottom)))
-
+;;(add-to-list 'display-buffer-alist
+           ;; '("^\\*eshell\\*$" (display-buffer-in-side-window) (side . bottom)))
 
 ;; use hydra to resize buffers
 (use-package hydra)
@@ -461,7 +593,7 @@ the cursor by ARG lines."
 (defhydra hydra-buffer-resize (:timeout 6)
   "resize buffer"
   ("h" enlarge-window-horizontally "enlarge h")
-  ("n" shrink-window-horizontally "shrink h")
+  ("s" shrink-window-horizontally "shrink h")
   ("d" shrink-window "shrink v")
   ("u" enlarge-window "enlarge v")
   ("f" nil "finished" :exit t))
@@ -469,28 +601,12 @@ the cursor by ARG lines."
 (taras/my-leader-keys
  "r" '(hydra-buffer-resize/body :which-key "resize buffer"))
 
-;; completion
-
-;; (use-package auto-complete
-;;   :init
-;;   (progn
-;;     (ac-config-default)
-;;     (global-auto-complete-mode t)
-;;     (setq ac-sources '(ac-source-yasnippet
-;; 		       ac-source-abbrev
-;; 		       ac-source-words-in-same-mode-buffers))
-;;     ))
-
-
 ;; inserts line below
 ;; and jumps to it below
-
-
 (defun end-of-line-and-indented-new-line ()
   (interactive)
   (end-of-line)
   (newline-and-indent))
-
 (global-set-key (kbd "<S-return>") 'end-of-line-and-indented-new-line)
 
 
@@ -501,8 +617,8 @@ the cursor by ARG lines."
               ("<tab>" . company-complete-selection)
 	      ("C-n" . company-select-next)
 	      ("C-r" . company-select-previous))
-        (:map lsp-mode-map
-              ("<tab>" . company-indent-or-complete-common))	  
+        ;; (:map lsp-mode-map
+        ;;       ("<tab>" . company-indent-or-complete-common))	  
   :custom
   (company-minimum-prefix-length 1)
   (company-idle-delay 0.0))
@@ -529,23 +645,11 @@ the cursor by ARG lines."
   :hook (term-mode . eterm-256color-mode))
 
 
-;; set clang as syntax checker for C and C++
-
-
-;;(global-flycheck-mode t)
-
 ;; expand region
-
 (use-package expand-region
   :config
   (global-set-key(kbd "C-=") 'er/expand-region)
   (global-set-key(kbd "C-+") 'er/contract-region))
-
-
-;; C/C++ configuration
-;; set "gnu" style indenting for C
-(setq c-default-style "linux"
-      c-basic-offset 4)
 
 
 ;; ------------------ garbage collections and startup performance ----------------
@@ -560,21 +664,26 @@ the cursor by ARG lines."
   :custom
   (sp-escape-quotes-after-insert t)
   :config
-  (require 'smartparens-config)
-  :bind
-  ("C-k" . 'sp-kill-sexp))
+  (require 'smartparens-config))
 
 (show-paren-mode t)  
 
-;; (use-package c-or-c++-mode
-;;   :config
-;;   (progn
-;;     (flycheck-mode)
-;;     (setq flycheck-checker 'c/c++-clang)
-;;     )
-;;   )
+;;--------- C style -------------
 
-;; (require 'flycheck)
-;; (setq flycheck-checker 'c/c++-clang)
-;; (flycheck-mode)
-;; (add-hook 'c-mode-common-hook 'flycheck-mode)
+
+;; remove electric behaviour( reindentation) when pressing : in c++
+;; https://www.reddit.com/r/emacs/comments/4iuw9s/wanting_to_disable_electric_indenting_except_on/
+
+(defun my-c++-mode-hook ()
+  (define-key c-mode-map ":" 'self-insert-command)
+  (define-key c++-mode-map ":" 'self-insert-command)
+  ;; (setq c-hungry-delete-key t)
+  (setq comment-start "//" comment-end "")
+  (flycheck-mode))
+
+(add-hook 'c-mode-common-hook 'my-c++-mode-hook)
+
+(setq c-default-style "linux" c-basic-offset 4)
+
+;;(add-to-list 'load-path "~/.emacs.d/pack/icicles/")
+;;(require 'icicles)
