@@ -8,7 +8,8 @@
 ;; (defvar my/font-face "Inconsolata Nerd Font Mono")
 (defvar my/font-face "SourceCode Pro")
 ;; (defvar my/font-face "Hack Nerd Font Mono")
-;; (defvar my/font-face "SauceCodePro Nerd Font Mono")
+;; (defvar my/font-face "Iosevka Comfy Fixed")
+;; (defvar my/font-face "Iosevka Nerd Font Mono")
 (defvar my/font-weight 'regular)
 
 ;;------------------- package management setup ----------------
@@ -183,7 +184,7 @@
 
 (use-package nlinum
   :custom
-  (nlinum-format "%4d    ")
+  (nlinum-format "%4d     ")
   (nlinum-highlight-current-line t)
   (nlinum-widen t)
   :config
@@ -274,20 +275,36 @@ the cursor by ARG lines."
 ;; ----------------------------  UI Configuration --------------------
 ;; custom load path for themes
 (add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
+(add-to-list 'load-path "~/.emacs.d/modus-themes")
 
-(setq modus-themes-italic-constructs t
-      modus-themes-bold-constructs t)
+(require 'modus-themes)
 
+;; Add all your customizations prior to loading the themes
+(setq modus-themes-italic-constructs t  modus-themes-bold-constructs t modus-themes-disable-other-themes t)
+;; Maybe define some palette overrides, such as by using our presets
+;;(setq modus-themes-common-palette-overrides
+ ;;     `((bg-paren-match bg-magenta-intense),@modus-themes-preset-overrides-cooler))
+;; (setq modus-themes-common-palette-overrides '((bg-paren-match bg-magenta-intense)))
+
+
+;; Load the theme of your choice.
+(load-theme 'modus-operandi t)
+(define-key global-map (kbd "<f5>") #'modus-themes-toggle)
+
+
+;; (setq modus-themes-italic-constructs t
+;;       modus-themes-bold-constructs t)
+
+;; (setq modus-themes-operandi-palette-overrides modus-themes-preset-overrides-faint)
 ;; Load the theme of your choice:
-(load-theme 'modus-operandi t) ;; OR (load-theme 'modus-vivendi)
+;; (load-theme 'modus-operandi t) ;; OR (load-theme 'modus-vivendi)
 
 ;; Enable underlines by applying a color to them
 ;; (setq modus-themes-common-palette-overrides
 ;;       '((bg-paren-match bg-magenta-intense)
 ;;         (underline-paren-match fg-main)))
 
-;;(define-key global-map (kbd "<f5>") #'modus-themes-toggle)
-(global-set-key (kbd "<f5>") 'compile)
+;; (global-set-key (kbd "<f5>") 'compile)
 
 ;; (setq modus-themes-paren-match '(bold intense))
 ;;(setq modus-themes-syntax 'yellow-comments)
@@ -297,7 +314,11 @@ the cursor by ARG lines."
 ;; to navigate in a buffer by letters
 
 (use-package avy
-     :after ggtags)
+  :after (lsp-mode)
+  :bind
+  ("C-c a" . avy-goto-char-timer)
+  :init
+  (setq avy-timeout-seconds 2))
 
 ;; colorize the brackets
 
@@ -503,13 +524,14 @@ targets."
 (use-package wgrep
   :after projectile)
 
-;; ------------------------lsp + clangd -----------------------------
-(setq lsp-language-server 'clangd)
-(add-hook 'c-mode-hook #'lsp)
-(add-hook 'c++-mode-hook #'lsp)
+;; ------------------------lsp  -----------------------------
+
+;; disable inserting headers automatically
+;;https://emacs.stackexchange.com/questions/58015/how-to-stop-lsp-mode-including-headers-automatically-for-c-c-code
+(setq lsp-clients-clangd-args
+    '("--header-insertion=never"))
 
 (use-package lsp-mode
-  ;;:commands (lsp lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-c l")  ;; Or 'C-l', 's-l'
   :config
@@ -526,34 +548,23 @@ targets."
   :custom
   (lsp-ui-doc-position 'at-point))
 
-(use-package consult-lsp
-   :after lsp)
+;; (use-package consult-lsp
+;;    :after lsp)
 
 (taras/my-leader-keys
-  "l"  '(:ignore t :which-key "lsp")
-  "ld" 'xref-find-definitions
-  "lr" 'xref-find-references
-  "ln" 'lsp-ui-find-next-reference
-  "lp" 'lsp-ui-find-prev-reference
-  "ls" 'consult-imenu
-  "le" 'lsp-ui-flycheck-list
-  "lS" 'lsp-ui-sideline-mode
-  "lX" 'lsp-execute-code-action)
+  "e" '(eldoc-print-current-symbol-info :which-key "print eldoc"))
+  ;; "d" 'xref-find-definitions
+  ;; "lr" 'xref-find-references
+  ;; "ln" 'lsp-ui-find-next-reference
+;;   "lp" 'lsp-ui-find-prev-reference
+;;   "le" 'flycheck-list-errors
+;;   "lS" 'lsp-ui-sideline-mode
+;;   "lX" 'lsp-execute-code-action)
 
 
 (with-eval-after-load 'lsp-mode
   (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
 
-
-;;(add-hook 'c-mode-hook (lambda() (setq flycheck-checker 'c/c++-clang)(flycheck-mode t)))
-(defun flycheck-c-mode-preset()
-  (require 'flycheck)
-  (setq flychecker 'c/c++-clang)
-  (flycheck-mode)
-  (message "flychecking is enabled by Taras in C/C++ mode"))
-
-(use-package flycheck
-  :after lsp)
 
 ;; for formatting C and C++ code
 ;; a .clang-format file should be present
@@ -568,20 +579,20 @@ targets."
 (taras/my-leader-keys
   "f" '(clang-format-buffer :which-key "format buffer with clang"));
 
-;; ------------------------lsp + clangd -----------------------------
+;; ------------------------ company , snippets  -----------------------------
 
 ;;snippets expansion
 (use-package yasnippet-snippets
 :hook (prog-mode . yas-minor-mode))
 
 ;; tags for code navigation
-(use-package ggtags
-:after lsp-mode
-:config
-(add-hook 'c-mode-common-hook
-(lambda ()
-(when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
-  (ggtags-mode 1)))))
+;; (use-package ggtags
+;; :after lsp-mode
+;; :config
+;; (add-hook 'c-mode-common-hook
+;; (lambda ()
+;; (when (derived-mode-p 'c-mode 'c++-mode 'java-mode)
+;;   (ggtags-mode 1)))))
 
 ;; opens eshell in right split window
 ;;(add-to-list 'display-buffer-alist
@@ -611,7 +622,6 @@ targets."
 
 
 (use-package company
-  :after lsp-mode
   :hook (lsp-mode . company-mode)
   :bind (:map company-active-map
               ("<tab>" . company-complete-selection)
@@ -670,20 +680,42 @@ targets."
 
 ;;--------- C style -------------
 
+(use-package flycheck
+  :after lsp)
+
+;; (add-hook 'c-mode-hook #'lsp)
+;; (add-hook 'c++-mode-hook #'lsp)
 
 ;; remove electric behaviour( reindentation) when pressing : in c++
 ;; https://www.reddit.com/r/emacs/comments/4iuw9s/wanting_to_disable_electric_indenting_except_on/
-
-(defun my-c++-mode-hook ()
+;; https://stackoverflow.com/questions/24097839/how-to-add-include-path-to-flycheck-c-c-clang
+(defun my-c-common-mode-hook ()
+  (lsp)
   (define-key c-mode-map ":" 'self-insert-command)
   (define-key c++-mode-map ":" 'self-insert-command)
-  ;; (setq c-hungry-delete-key t)
   (setq comment-start "//" comment-end "")
-  (flycheck-mode))
+  (require 'flycheck)
+  (setq flycheck-checker 'c/c++-clang)
+  (setq flycheck-clang-include-path (list (expand-file-name "~/taras-ivashchuk-fork/http_server/mbedtls/include/")
+					  (expand-file-name "~/taras-ivashchuk-fork/http_server/mbedtls/tests/include/")))
+  (flycheck-mode t)
+  (flymake-mode -1)
+  (setq lsp-language-server 'clangd))
 
-(add-hook 'c-mode-common-hook 'my-c++-mode-hook)
-
+(add-hook 'c-mode-common-hook 'my-c-common-mode-hook)
 (setq c-default-style "linux" c-basic-offset 4)
 
-;;(add-to-list 'load-path "~/.emacs.d/pack/icicles/")
-;;(require 'icicles)
+
+;; https://emacs.stackexchange.com/questions/4119/problem-assigning-variables
+;; https://stackoverflow.com/questions/18612742/emacs-desktop-save-mode-error#comment47963002_26546872
+(setq desktop-path `(,user-emacs-directory "~"))
+;;(add-hook 'server-after-make-frame-hook 'desktop-read)
+(setq desktop-restore-forces-onscreen nil)
+
+
+;; ---------------------------    eglot ----------------------------------
+;; https://clangd.llvm.org/installation
+;; (require 'eglot)
+;; (add-to-list 'eglot-server-programs '((c++-mode c-mode) "clangd"))
+;; (add-hook 'c-mode-hook (lambda() (eglot-ensure) ))
+;; (add-hook 'eglot-managed-mode-hook (lambda ()(eglot-inlay-hints-mode -1)(eldoc-mode -1)  (message "eglot hints fixed")))
